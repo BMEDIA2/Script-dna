@@ -2294,6 +2294,8 @@ async function authSubmit(){
     const data=await r.json();
     if(!r.ok){errEl.textContent=data.error_description||data.msg||'Error de autenticación.';errEl.classList.add('on');return;}
     if(_authMode==='signup'){
+      // Si Supabase devuelve token directo (email confirmation off), usarlo
+      if(data.access_token){await handleAuthSuccess(data);return;}
       errEl.style.color='#27c97a';errEl.textContent='Cuenta creada. Espera la aprobación del administrador.';errEl.classList.add('on');
       btn.disabled=false;btn.textContent='Crear cuenta';return;
     }
@@ -2327,10 +2329,13 @@ async function refreshAuthIfNeeded(){
 }
 
 async function checkApproval(){
-  const r=await fetch(getSBUrl()+'/rest/v1/profiles?select=approved',{headers:sbHeaders()});
-  if(!r.ok)return false;
-  const rows=await r.json();
-  return rows.length>0&&rows[0].approved===true;
+  try{
+    const r=await fetch(getSBUrl()+'/rest/v1/profiles?select=approved&limit=1',{headers:sbHeaders()});
+    if(r.status===401||r.status===403){clearAuthSession();return false;}
+    if(!r.ok)return false;
+    const rows=await r.json();
+    return Array.isArray(rows)&&rows.length>0&&rows[0].approved===true;
+  }catch(e){return false;}
 }
 
 function clearAuthSession(){

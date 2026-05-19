@@ -892,6 +892,10 @@ select option{background:#F9F3E6;color:#16165E}
 <div class="fab-tooltip">Chat con el clon</div>
 
 <script>
+// ─── SUPABASE CONFIG ──────────────────────────────────────
+const DEFAULT_SB_URL='https://gtoomkmpovppjjsktedd.supabase.co';
+const DEFAULT_SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b29ta21wb3ZwcGpqc2t0ZWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTY0MjEsImV4cCI6MjA5NDY5MjQyMX0.OTbX5WyJORQTBBMoGrDmRKrxfRApf3sG9OoC6GN6dzQ';
+
 // ─── STATE ───────────────────────────────────────────────
 let aFmt='ad', aAngle='dolor', aDur='', tuteo='tu';
 let bank=JSON.parse(localStorage.getItem('sdna_bank')||'[]');
@@ -994,8 +998,8 @@ const CAT_CSS={historia:'lt-historia',resultados:'lt-resultados',cliente:'lt-cli
 const CAT_SECTION={historia:'HISTORIA Y ORIGEN',resultados:'RESULTADOS Y CASOS',cliente:'CLIENTE IDEAL',oferta:'OFERTA Y SERVICIOS',voz:'VOZ Y EXPRESIONES',general:'CONTEXTO GENERAL'};
 
 // ─── SUPABASE HELPERS ─────────────────────────────────────
-function getSBUrl(){return localStorage.getItem('sdna_sb_url')||'';}
-function getSBKey(){return localStorage.getItem('sdna_sb_key')||'';}
+function getSBUrl(){return localStorage.getItem('sdna_sb_url')||DEFAULT_SB_URL||'';}
+function getSBKey(){return localStorage.getItem('sdna_sb_key')||DEFAULT_SB_KEY||'';}
 function hasSB(){return !!(getSBUrl()&&getSBKey());}
 function getAuthToken(){return localStorage.getItem('sdna_auth_token')||'';}
 function sbHeaders(){
@@ -2237,9 +2241,6 @@ function renderMap(mapa){
   document.getElementById('mp-sintesis-text').textContent=mapa.sintesis||'';
   document.getElementById('mp-reco-text').textContent=mapa.recomendacion_contenido||'';
 }
-
-const DEFAULT_SB_URL='https://gtoomkmpovppjjsktedd.supabase.co';
-const DEFAULT_SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b29ta21wb3ZwcGpqc2t0ZWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTY0MjEsImV4cCI6MjA5NDY5MjQyMX0.OTbX5WyJORQTBBMoGrDmRKrxfRApf3sG9OoC6GN6dzQ';
 
 // ─── MAPA MENTAL SUPABASE ─────────────────────────────────
 async function saveMapToSB(mapa){

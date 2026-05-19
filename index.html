@@ -1554,14 +1554,14 @@ function refreshSBStatus(){
 async function initSB(){
   if(!hasSB())return;
   await loadPersonasList();
-  if(activePersonaId){await loadLibFromSB();await loadChatFromSB();await loadMapFromSB();}
+  if(activePersonaId){await loadLibFromSB();await loadChatFromSB();await loadMapFromSB();await loadBankFromSB();}
   else if(allPersonas.length){
     activePersonaId=allPersonas[0].id;
     localStorage.setItem('sdna_active_pid',activePersonaId);
     persona={...allPersonas[0]};
     localStorage.setItem('sdna_persona',JSON.stringify(persona));
     fillForm(persona);
-    await loadLibFromSB();await loadChatFromSB();await loadMapFromSB();
+    await loadLibFromSB();await loadChatFromSB();await loadMapFromSB();await loadBankFromSB();
     renderPersonaSelector();
   }
 }
@@ -1717,8 +1717,8 @@ function autoSaveToBank(scriptData){
   // avoid exact duplicate on same day (same title)
   const isDupe=bank.length>0&&bank[0].script.tipo===scriptData.tipo&&bank[0].date===today;
   if(!isDupe){
-    bank.unshift({id:'b'+Date.now(),script:scriptData,date:today});
-    localStorage.setItem('sdna_bank',JSON.stringify(bank));
+    const item={id:'b'+Date.now(),script:scriptData,date:today,persona_id:activePersonaId||null};
+    bank.unshift(item);saveBank();sbSaveBank(item);
   }
 }
 
@@ -1780,7 +1780,8 @@ function toggleSoutEdit(btn){
             item.script.bloques[bi].text=ta.value;
           }
         });
-        localStorage.setItem('sdna_bank',JSON.stringify(bank));
+        saveBank();
+        sbPatch('scripts_bank','id=eq.'+item.id,{script:item.script});
         toast('Cambios guardados en el banco.');
       }
     }
@@ -1824,8 +1825,32 @@ function copyScript(btn){
 function copyRaw(btn){navigator.clipboard.writeText(decodeURIComponent(btn.dataset.text)).then(()=>{const o=btn.innerHTML;btn.innerHTML=ICONS.check+' Copiado';setTimeout(()=>btn.innerHTML=o,2000);});}
 
 // ─── BANK ────────────────────────────────────────────────
+function saveBank(){localStorage.setItem('sdna_bank',JSON.stringify(bank));}
+
+async function sbSaveBank(item){
+  if(!hasSB())return;
+  await sbPost('scripts_bank',{id:item.id,persona_id:activePersonaId||null,script:item.script,date:item.date});
+}
+async function sbDeleteBank(id){
+  if(!hasSB())return;
+  await sbDelete('scripts_bank','id=eq.'+id);
+}
+async function sbClearBank(){
+  if(!hasSB()||!activePersonaId)return;
+  await sbDelete('scripts_bank','persona_id=eq.'+activePersonaId);
+}
+async function loadBankFromSB(){
+  if(!hasSB()||!activePersonaId)return;
+  const rows=await sbGet('scripts_bank','?persona_id=eq.'+activePersonaId+'&order=created_at.desc');
+  if(rows&&rows.length){bank=rows.map(r=>({id:r.id,script:r.script,date:r.date,persona_id:r.persona_id}));saveBank();renderBank();}
+}
+
 function saveToBankRaw(btn){
-  try{const s=JSON.parse(decodeURIComponent(btn.dataset.s));bank.unshift({id:'b'+Date.now(),script:s,date:new Date().toLocaleDateString('es-ES')});localStorage.setItem('sdna_bank',JSON.stringify(bank));toast('Guardado en el banco.');}catch(e){}
+  try{
+    const s=JSON.parse(decodeURIComponent(btn.dataset.s));
+    const item={id:'b'+Date.now(),script:s,date:new Date().toLocaleDateString('es-ES'),persona_id:activePersonaId||null};
+    bank.unshift(item);saveBank();sbSaveBank(item);toast('Guardado en el banco.');
+  }catch(e){}
 }
 function renderBank(){
   const el=document.getElementById('bank-list');
@@ -1907,8 +1932,8 @@ function bankEdit(bid,i,btn){
 }
 
 function copyBankItem(i){const s=bank[i].script;const text=s.bloques.map(b=>`[${b.label}]\n${b.text}`).join('\n\n');navigator.clipboard.writeText(text).then(()=>toast('Copiado.'));}
-function delBank(i){bank.splice(i,1);localStorage.setItem('sdna_bank',JSON.stringify(bank));renderBank();}
-function clearBank(){if(!confirm('¿Vaciar el banco de guiones?'))return;bank=[];localStorage.setItem('sdna_bank',JSON.stringify(bank));renderBank();}
+function delBank(i){const id=bank[i]?.id;bank.splice(i,1);saveBank();if(id)sbDeleteBank(id);renderBank();}
+function clearBank(){if(!confirm('¿Vaciar el banco de guiones?'))return;bank=[];saveBank();sbClearBank();renderBank();}
 
 // ─── TOAST ───────────────────────────────────────────────
 function toast(msg){const el=document.getElementById('toast');document.getElementById('t-txt').textContent=msg;el.classList.add('on');setTimeout(()=>el.classList.remove('on'),3000);}

@@ -46,3 +46,22 @@ create policy "anon full access personas" on personas for all using (true) with 
 create policy "anon full access library" on library_items for all using (true) with check (true);
 create policy "anon full access chat" on chat_history for all using (true) with check (true);
 create policy "anon full access mapa" on mapa_mental for all using (true) with check (true);
+
+-- ═══════════════════════════════════════════
+-- Banco de guiones (scripts_bank)
+-- Ejecutar en: Supabase Dashboard → SQL Editor → Run
+-- ═══════════════════════════════════════════
+create table if not exists scripts_bank (
+  id text primary key,
+  persona_id uuid references personas(id) on delete cascade,
+  script jsonb,
+  date text,
+  created_at timestamptz default now()
+);
+
+alter table scripts_bank enable row level security;
+
+create policy "approved access scripts_bank" on scripts_bank
+  for all
+  using  (exists (select 1 from profiles where id = auth.uid() and approved = true))
+  with check (exists (select 1 from profiles where id = auth.uid() and approved = true));

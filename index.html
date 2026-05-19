@@ -728,6 +728,24 @@ select option{background:#F9F3E6;color:#16165E}
     </div>
   </div>
 
+  <!-- Colaboradores MCP -->
+  <div class="card" style="margin-top:12px">
+    <div class="clabel">Colaboradores · MCP para Claude</div>
+    <p style="font-size:13px;color:var(--text-2);margin:0 0 12px">Comparte este enlace con colaboradores. Al pegarlo en Claude Code, Claude instala automáticamente el conector y puede subir contexto al DNA de cualquier clon desde Claude Desktop.</p>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="mcp-install-url" type="text" readonly
+        value="https://raw.githubusercontent.com/BMEDIA2/Script-dna/main/mcp-server/mcp-install.md"
+        style="flex:1;font-size:12px;font-family:monospace;background:var(--surface-3);border:1px solid var(--border-md);border-radius:8px;padding:8px 10px;color:var(--text-2);cursor:default">
+      <button class="btn btn-dark btn-sm" onclick="copyMcpLink(this)">Copiar</button>
+    </div>
+    <div class="info-list" style="margin-top:12px">
+      <div>1 · El colaborador abre <strong style="color:var(--text)">Claude Code</strong> en su terminal</div>
+      <div>2 · Pega el enlace de arriba en el chat de Claude</div>
+      <div>3 · Claude descarga, instala y configura todo solo</div>
+      <div>4 · Al reiniciar Claude Desktop ya puede subir contexto con lenguaje natural</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══ MAPA MENTAL ═══ -->
@@ -1322,6 +1340,13 @@ function saveApiKey(){
   refreshApiStatus();toast('API key guardada.');
 }
 function clearApiKey(){localStorage.removeItem('sdna_apikey');refreshApiStatus();toast('API key eliminada.');}
+function copyMcpLink(btn){
+  const url=document.getElementById('mcp-install-url').value;
+  navigator.clipboard.writeText(url).then(()=>{
+    const orig=btn.textContent;btn.textContent='Copiado';
+    setTimeout(()=>btn.textContent=orig,1800);
+  });
+}
 function getApiKey(){return localStorage.getItem('sdna_apikey')||'';}
 function getModel(){return localStorage.getItem('sdna_model')||'claude-sonnet-4-6';}
 function refreshApiStatus(){

@@ -1,0 +1,13 @@
+{
+  "_instrucciones": "Copia este bloque dentro de claude_desktop_config.json en la sección 'mcpServers'. Luego reinicia Claude Desktop.",
+  "mcpServers": {
+    "script-dna": {
+      "command": "node",
+      "args": ["RUTA_ABSOLUTA/script-dna-deploy/mcp-server/index.js"],
+      "env": {
+        "SUPABASE_URL": "https://gtoomkmpovppjjsktedd.supabase.co",
+        "SUPABASE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0b29ta21wb3ZwcGpqc2t0ZWRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMTY0MjEsImV4cCI6MjA5NDY5MjQyMX0.OTbX5WyJORQTBBMoGrDmRKrxfRApf3sG9OoC6GN6dzQ"
+      }
+    }
+  }
+}

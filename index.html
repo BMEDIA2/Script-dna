@@ -215,6 +215,20 @@ select option{background:#F9F3E6;color:#16165E}
 /* ── WARN ── */
 .warn{background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.2);border-radius:var(--r-sm);color:#c2410c;padding:9px 13px;font-size:12px;margin-bottom:11px;display:none}
 
+/* ── CONFIRM MODAL ── */
+.confirm-overlay{position:fixed;inset:0;background:rgba(22,22,94,0.55);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.18s}
+.confirm-overlay.on{opacity:1;pointer-events:all}
+.confirm-box{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--r);padding:28px 28px 22px;width:340px;max-width:92vw;box-shadow:var(--shadow-lg);transform:translateY(10px);transition:transform 0.18s}
+.confirm-overlay.on .confirm-box{transform:translateY(0)}
+.confirm-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+.confirm-sub{font-size:13px;color:var(--text-3);margin-bottom:18px;line-height:1.5}
+.confirm-code{display:inline-block;font-family:monospace;font-size:22px;font-weight:700;letter-spacing:4px;color:var(--accent);background:var(--accent-lt);border-radius:8px;padding:7px 18px;margin-bottom:16px;user-select:none}
+.confirm-input{width:100%;box-sizing:border-box;text-align:center;font-family:monospace;font-size:20px;letter-spacing:4px;font-weight:600;padding:9px;border:1.5px solid var(--border-md);border-radius:8px;background:var(--surface-2);color:var(--text);outline:none;transition:border-color 0.15s}
+.confirm-input:focus{border-color:var(--accent)}
+.confirm-input.err{border-color:#e05555;animation:shake 0.3s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.confirm-btns{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+
 /* ── TOAST ── */
 .toast{position:fixed;bottom:20px;right:20px;background:#16165E;border:1px solid rgba(28,0,221,0.4);color:#EDDDC4;font-size:13px;font-weight:400;padding:9px 16px;border-radius:var(--r);display:none;align-items:center;gap:7px;z-index:99;box-shadow:var(--shadow-lg);letter-spacing:-0.1px}
 .toast.on{display:flex}
@@ -791,6 +805,22 @@ select option{background:#F9F3E6;color:#16165E}
 
 <div class="toast" id="toast"><i class="ti ti-circle-check"></i><span id="t-txt"></span></div>
 
+<!-- Confirm delete modal -->
+<div class="confirm-overlay" id="confirm-overlay" onclick="closeConfirm(event)">
+  <div class="confirm-box">
+    <div class="confirm-title">¿Eliminar este elemento?</div>
+    <div class="confirm-sub" id="confirm-sub">Esta acción no se puede deshacer. Para confirmar, escribe el código que aparece abajo.</div>
+    <div style="text-align:center;margin-bottom:4px">
+      <div class="confirm-code" id="confirm-code">----</div>
+    </div>
+    <input class="confirm-input" id="confirm-input" type="text" inputmode="numeric" maxlength="4" placeholder="····" autocomplete="off" oninput="onConfirmInput()" onkeydown="onConfirmKey(event)">
+    <div class="confirm-btns">
+      <button class="btn btn-ghost btn-sm" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-sm" id="confirm-btn" style="background:#e05555;color:#fff;opacity:0.45;cursor:not-allowed" onclick="commitDelete()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <button class="fab" onclick="openChat()" title="Chat con el clon"><i class="ti ti-messages"></i></button>
 <div class="fab-tooltip">Chat con el clon</div>
 
@@ -1172,9 +1202,55 @@ function loadFile(inp){
   r.readAsText(f,'UTF-8');inp.value='';
 }
 
+let _pendingDeleteId=null;
+let _confirmCode='';
+
 function deleteItem(id){
-  lib=lib.filter(i=>i.id!==id);saveLib();renderLib();
-  sbDelete('library_items','id=eq.'+id);
+  const item=lib.find(i=>i.id===id);
+  if(!item)return;
+  _pendingDeleteId=id;
+  _confirmCode=String(Math.floor(1000+Math.random()*9000));
+  document.getElementById('confirm-code').textContent=_confirmCode;
+  document.getElementById('confirm-sub').textContent=
+    '"'+( item.label||item.type||'elemento' ).slice(0,60)+'" se eliminará permanentemente. Escribe el código para confirmar.';
+  document.getElementById('confirm-input').value='';
+  document.getElementById('confirm-btn').style.opacity='0.45';
+  document.getElementById('confirm-btn').style.cursor='not-allowed';
+  document.getElementById('confirm-input').classList.remove('err');
+  document.getElementById('confirm-overlay').classList.add('on');
+  setTimeout(()=>document.getElementById('confirm-input').focus(),120);
+}
+
+function onConfirmInput(){
+  const val=document.getElementById('confirm-input').value;
+  const btn=document.getElementById('confirm-btn');
+  const match=(val===_confirmCode);
+  btn.style.opacity=match?'1':'0.45';
+  btn.style.cursor=match?'pointer':'not-allowed';
+}
+
+function onConfirmKey(e){
+  if(e.key==='Enter')commitDelete();
+  if(e.key==='Escape')closeConfirm();
+}
+
+function commitDelete(){
+  const val=document.getElementById('confirm-input').value;
+  if(val!==_confirmCode){
+    const inp=document.getElementById('confirm-input');
+    inp.classList.remove('err');void inp.offsetWidth;inp.classList.add('err');
+    return;
+  }
+  lib=lib.filter(i=>i.id!==_pendingDeleteId);saveLib();renderLib();
+  sbDelete('library_items','id=eq.'+_pendingDeleteId);
+  closeConfirm();
+  toast('Elemento eliminado.');
+}
+
+function closeConfirm(e){
+  if(e&&e.target!==document.getElementById('confirm-overlay'))return;
+  document.getElementById('confirm-overlay').classList.remove('on');
+  _pendingDeleteId=null;
 }
 function toggleExp(id){document.getElementById('exp-'+id).classList.toggle('open');}
 function saveItem(id){

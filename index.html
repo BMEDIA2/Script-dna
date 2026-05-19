@@ -215,6 +215,25 @@ select option{background:#F9F3E6;color:#16165E}
 /* ── WARN ── */
 .warn{background:rgba(234,88,12,0.06);border:1px solid rgba(234,88,12,0.2);border-radius:var(--r-sm);color:#c2410c;padding:9px 13px;font-size:12px;margin-bottom:11px;display:none}
 
+/* ── AUTH SCREENS ── */
+#auth-screen,#pending-screen{position:fixed;inset:0;background:#16165E;z-index:300;display:flex;align-items:center;justify-content:center;flex-direction:column}
+.auth-box{background:var(--surface);border:1px solid var(--border-md);border-radius:var(--r);padding:36px 32px 28px;width:380px;max-width:92vw;box-shadow:var(--shadow-lg)}
+.auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+.auth-logo-dot{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#1C00DD,#16165E);color:#EDDDC4;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.auth-logo-name{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.4px}
+.auth-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-0.4px}
+.auth-sub{font-size:13px;color:var(--text-3);margin-bottom:22px}
+.auth-err{font-size:12px;color:#e05555;background:rgba(224,85,85,0.07);border:1px solid rgba(224,85,85,0.2);border-radius:7px;padding:8px 11px;margin-bottom:14px;display:none}
+.auth-err.on{display:block}
+.auth-toggle{font-size:13px;color:var(--text-3);text-align:center;margin-top:16px}
+.auth-toggle span{color:var(--accent);cursor:pointer;font-weight:500}
+.auth-toggle span:hover{text-decoration:underline}
+/* pending */
+.pending-box{text-align:center;color:#EDDDC4;max-width:360px;padding:0 24px}
+.pending-icon{font-size:48px;margin-bottom:16px;opacity:0.7}
+.pending-title{font-size:20px;font-weight:700;margin-bottom:10px;letter-spacing:-0.4px}
+.pending-sub{font-size:14px;opacity:0.6;line-height:1.6;margin-bottom:24px}
+
 /* ── CONFIRM MODAL ── */
 .confirm-overlay{position:fixed;inset:0;background:rgba(22,22,94,0.55);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.18s}
 .confirm-overlay.on{opacity:1;pointer-events:all}
@@ -389,7 +408,7 @@ select option{background:#F9F3E6;color:#16165E}
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="shell" id="app-shell" style="display:none">
 
 <!-- ── SIDEBAR ── -->
 <div class="sidebar">
@@ -760,6 +779,21 @@ select option{background:#F9F3E6;color:#16165E}
     </div>
   </div>
 
+  <!-- Sesión actual -->
+  <div class="card" style="margin-top:12px" id="session-card">
+    <div class="clabel">Sesión</div>
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;color:var(--text-2)" id="session-email">—</div>
+      <button class="btn btn-ghost btn-sm" onclick="authSignOut()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- Panel de admin (solo visible para el dueño) -->
+  <div class="card" style="margin-top:12px;display:none" id="admin-panel">
+    <div class="clabel">Admin · Usuarios pendientes de aprobación</div>
+    <div id="admin-list" style="font-size:13px;color:var(--text-3)">Cargando...</div>
+  </div>
+
 </div>
 
 <!-- ═══ MAPA MENTAL ═══ -->
@@ -804,6 +838,39 @@ select option{background:#F9F3E6;color:#16165E}
 </div><!-- /shell -->
 
 <div class="toast" id="toast"><i class="ti ti-circle-check"></i><span id="t-txt"></span></div>
+
+<!-- Auth: Login/Signup -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-dot">S</div>
+      <div class="auth-logo-name">Script DNA</div>
+    </div>
+    <div class="auth-title" id="auth-title">Iniciar sesión</div>
+    <div class="auth-sub" id="auth-sub">Acceso privado — solo usuarios autorizados.</div>
+    <div class="auth-err" id="auth-err"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="tu@email.com" onkeydown="authKey(event)">
+    </div>
+    <div class="field" style="margin-bottom:18px">
+      <label>Contraseña</label>
+      <input type="password" id="auth-pass" placeholder="••••••••" onkeydown="authKey(event)">
+    </div>
+    <button class="btn btn-dark" style="width:100%;justify-content:center" id="auth-btn" onclick="authSubmit()">Entrar</button>
+    <div class="auth-toggle">¿No tienes cuenta? <span onclick="authToggleMode()">Solicitar acceso</span></div>
+  </div>
+</div>
+
+<!-- Auth: Pending approval -->
+<div id="pending-screen" style="display:none">
+  <div class="pending-box">
+    <div class="pending-icon">⏳</div>
+    <div class="pending-title">Solicitud enviada</div>
+    <div class="pending-sub">Tu cuenta ha sido creada pero aún no ha sido aprobada. El administrador revisará tu acceso en breve.</div>
+    <button class="btn btn-ghost" style="color:#EDDDC4;border-color:rgba(237,221,196,0.3)" onclick="authSignOut()">Cerrar sesión</button>
+  </div>
+</div>
 
 <!-- Confirm delete modal -->
 <div class="confirm-overlay" id="confirm-overlay" onclick="closeConfirm(event)">
@@ -930,7 +997,12 @@ const CAT_SECTION={historia:'HISTORIA Y ORIGEN',resultados:'RESULTADOS Y CASOS',
 function getSBUrl(){return localStorage.getItem('sdna_sb_url')||'';}
 function getSBKey(){return localStorage.getItem('sdna_sb_key')||'';}
 function hasSB(){return !!(getSBUrl()&&getSBKey());}
-function sbHeaders(){const k=getSBKey();return{'Content-Type':'application/json','apikey':k,'Authorization':'Bearer '+k,'Prefer':'return=representation'};}
+function getAuthToken(){return localStorage.getItem('sdna_auth_token')||'';}
+function sbHeaders(){
+  const anon=getSBKey();
+  const jwt=getAuthToken()||anon;
+  return{'Content-Type':'application/json','apikey':anon,'Authorization':'Bearer '+jwt,'Prefer':'return=representation'};
+}
 function sbEndpoint(table,params=''){return getSBUrl()+'/rest/v1/'+table+params;}
 
 async function sbGet(table,params=''){
@@ -2193,16 +2265,146 @@ function loadMapLocal(){
 }
 
 // ─── INIT ─────────────────────────────────────────────────
+// ─── AUTH ─────────────────────────────────────────────────
+const ADMIN_EMAIL='nftremake@gmail.com';
+let _authMode='login'; // 'login' | 'signup'
+
+function authKey(e){if(e.key==='Enter')authSubmit();}
+
+function authToggleMode(){
+  _authMode=(_authMode==='login')?'signup':'login';
+  document.getElementById('auth-title').textContent=_authMode==='login'?'Iniciar sesión':'Solicitar acceso';
+  document.getElementById('auth-sub').textContent=_authMode==='login'?'Acceso privado — solo usuarios autorizados.':'Crea tu cuenta. Un administrador aprobará tu acceso.';
+  document.getElementById('auth-btn').textContent=_authMode==='login'?'Entrar':'Crear cuenta';
+  document.querySelector('.auth-toggle span').textContent=_authMode==='login'?'Solicitar acceso':'Ya tengo cuenta';
+  document.getElementById('auth-err').classList.remove('on');
+}
+
+async function authSubmit(){
+  const email=document.getElementById('auth-email').value.trim();
+  const pass=document.getElementById('auth-pass').value;
+  const errEl=document.getElementById('auth-err');
+  errEl.classList.remove('on');
+  if(!email||!pass){errEl.textContent='Completa email y contraseña.';errEl.classList.add('on');return;}
+  const btn=document.getElementById('auth-btn');
+  btn.disabled=true;btn.textContent='…';
+  try{
+    const url=getSBUrl()+(_authMode==='login'?'/auth/v1/token?grant_type=password':'/auth/v1/signup');
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':getSBKey()},body:JSON.stringify({email,password:pass})});
+    const data=await r.json();
+    if(!r.ok){errEl.textContent=data.error_description||data.msg||'Error de autenticación.';errEl.classList.add('on');return;}
+    if(_authMode==='signup'){
+      errEl.style.color='#27c97a';errEl.textContent='Cuenta creada. Espera la aprobación del administrador.';errEl.classList.add('on');
+      btn.disabled=false;btn.textContent='Crear cuenta';return;
+    }
+    await handleAuthSuccess(data);
+  }catch(e){errEl.textContent='Error de conexión.';errEl.classList.add('on');}
+  finally{btn.disabled=false;btn.textContent=_authMode==='login'?'Entrar':'Crear cuenta';}
+}
+
+async function handleAuthSuccess(data){
+  localStorage.setItem('sdna_auth_token',data.access_token);
+  localStorage.setItem('sdna_auth_refresh',data.refresh_token||'');
+  localStorage.setItem('sdna_auth_expires',String(Date.now()+((data.expires_in||3600)-60)*1000));
+  localStorage.setItem('sdna_auth_email',data.user?.email||'');
+  await bootApp();
+}
+
+async function refreshAuthIfNeeded(){
+  const exp=parseInt(localStorage.getItem('sdna_auth_expires')||'0');
+  if(!exp||Date.now()<exp)return true;
+  const rt=localStorage.getItem('sdna_auth_refresh')||'';
+  if(!rt)return false;
+  try{
+    const r=await fetch(getSBUrl()+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json','apikey':getSBKey()},body:JSON.stringify({refresh_token:rt})});
+    if(!r.ok){clearAuthSession();return false;}
+    const data=await r.json();
+    localStorage.setItem('sdna_auth_token',data.access_token);
+    localStorage.setItem('sdna_auth_refresh',data.refresh_token||rt);
+    localStorage.setItem('sdna_auth_expires',String(Date.now()+((data.expires_in||3600)-60)*1000));
+    return true;
+  }catch(e){return false;}
+}
+
+async function checkApproval(){
+  const r=await fetch(getSBUrl()+'/rest/v1/profiles?select=approved',{headers:sbHeaders()});
+  if(!r.ok)return false;
+  const rows=await r.json();
+  return rows.length>0&&rows[0].approved===true;
+}
+
+function clearAuthSession(){
+  ['sdna_auth_token','sdna_auth_refresh','sdna_auth_expires','sdna_auth_email'].forEach(k=>localStorage.removeItem(k));
+}
+
+async function authSignOut(){
+  try{await fetch(getSBUrl()+'/auth/v1/logout',{method:'POST',headers:{...sbHeaders(),'Prefer':''}});}catch(e){}
+  clearAuthSession();
+  document.getElementById('app-shell').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('auth-email').value='';
+  document.getElementById('auth-pass').value='';
+}
+
+async function bootApp(){
+  const ok=await refreshAuthIfNeeded();
+  if(!ok){clearAuthSession();return;}
+  const approved=await checkApproval();
+  if(!approved){
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='flex';
+    return;
+  }
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+  const email=localStorage.getItem('sdna_auth_email')||'';
+  const el=document.getElementById('session-email');
+  if(el)el.textContent=email;
+  if(email===ADMIN_EMAIL)loadAdminPanel();
+  ensureActiveConv();fillForm(persona);renderLib();renderBank();refreshApiStatus();
+  loadMapLocal();
+  if(hasSB())await initSB();
+}
+
+async function loadAdminPanel(){
+  const panel=document.getElementById('admin-panel');
+  if(!panel)return;
+  panel.style.display='block';
+  const r=await fetch(getSBUrl()+'/rest/v1/profiles?select=id,email,approved,created_at&order=created_at.desc',{headers:sbHeaders()});
+  if(!r.ok){document.getElementById('admin-list').textContent='Error al cargar perfiles.';return;}
+  const profiles=await r.json();
+  if(!profiles.length){document.getElementById('admin-list').innerHTML='<div style="color:var(--text-4)">Sin usuarios registrados.</div>';return;}
+  document.getElementById('admin-list').innerHTML=profiles.map(p=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:500;color:var(--text)">${p.email||p.id}</div>
+        <div style="font-size:11px;color:var(--text-4)">${new Date(p.created_at).toLocaleDateString('es-ES')}</div>
+      </div>
+      ${p.approved
+        ?'<span style="font-size:11px;color:#27c97a;font-weight:600">Aprobado</span>'
+        :`<button class="btn btn-dark btn-sm" onclick="approveUser('${p.id}',this)">Aprobar</button>`}
+    </div>`).join('');
+}
+
+async function approveUser(id,btn){
+  btn.disabled=true;btn.textContent='…';
+  const r=await fetch(getSBUrl()+'/rest/v1/profiles?id=eq.'+id,{method:'PATCH',headers:sbHeaders(),body:JSON.stringify({approved:true})});
+  if(r.ok){btn.closest('div').querySelector('div+*').outerHTML='<span style="font-size:11px;color:#27c97a;font-weight:600">Aprobado</span>';}
+  else{btn.disabled=false;btn.textContent='Aprobar';}
+}
+
 window.addEventListener('load',async()=>{
-  // Pre-configure Supabase if not yet set
   if(!getSBUrl()){
     localStorage.setItem('sdna_sb_url',DEFAULT_SB_URL);
     localStorage.setItem('sdna_sb_key',DEFAULT_SB_KEY);
   }
-  ensureActiveConv();
-  fillForm(persona);renderLib();renderBank();refreshApiStatus();
-  loadMapLocal();
-  if(hasSB())await initSB();
+  // Si hay token guardado, intenta arrancar la app directamente
+  if(getAuthToken()){
+    await bootApp();
+  }
+  // Si no hay sesión, la pantalla de login ya está visible (display:flex por defecto)
 });
 </script>
 </body>
